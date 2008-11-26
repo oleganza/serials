@@ -20,7 +20,13 @@ describe Serials do
       @sn.serialized_key.should == "Apple:iPod:001"
     end
     it "should have serialized_value" do
-      @sn.serialized_value.should == Marshal.dump(@sn)
+      @sn.serialized_value.should == Marshal.dump(@sn.metadata)
+    end
+    it "should load SN by key and value" do
+      key   = @sn.serialized_key
+      value = @sn.serialized_value
+      sn    = SerialNumber.load(key, value)
+      sn.should == @sn
     end
     describe "#==" do
       before(:each) do
