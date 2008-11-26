@@ -7,9 +7,8 @@ require 'emrpc'
 module Serials extend self
   SEP = ":"
   
-  # always returns Integer for a given [company, namespace, number]
   def partition_key(company, namespace, number)
-    "#{company}#{SEP}#{namespace}".hash # we use simple built-in hash method
+    "#{company}#{SEP}#{namespace}"
   end
   
   def dump_key(company, namespace, number)
@@ -43,8 +42,10 @@ module Serials extend self
     end
     
     def ==(other)
-      serialized_key   == other.serialized_key && 
-      serialized_value == other.serialized_value
+      @company    == other.company    && 
+      @namespace  == other.namespace  && 
+      @number     == other.number     && 
+      @metadata   == other.metadata
     end
     
     class <<self
@@ -69,13 +70,22 @@ module Serials extend self
       key   = sn.serialized_key
       value = sn.serialized_value
       
-      
-      
-      nil
+      chunk = select_chunk(pkey)
+      chunk.write(key, value)
+      true
     end
     
-    def find(options)
+    def find(attrs)
+      company   = attrs.delete(:company)   or raise ":company is required!"
+      namespace = attrs.delete(:namespace) or raise ":namespace is required!"
+      number    = attrs.delete(:number)    or raise ":number is required!"
       
+      key  = Serials.dump_key(company, namespace, number)
+      pkey = Serials.partition_key(company, namespace, number)
+      chunk = select_chunk(pkey)
+      
+      data = chunk.read(key) or return nil
+      SerialNumber.load(key, data)
     end
     
     def open
@@ -86,6 +96,13 @@ module Serials extend self
       @chunks.each{ |c| c.close }
     end
     
+  private
+    
+    def select_chunk(pkey)
+      i = pkey.hash % @chunks.size
+      @chunks[i]
+    end
+    
     class Chunk
       include TokyoCabinet
       
@@ -94,10 +111,11 @@ module Serials extend self
         @index = options[:index] or raise ":index is required!"
         total  = options[:total] or raise ":total is required!"
         path_prefix = options[:path_prefix] or raise ":path_prefix required!"
-        @path = "#{path_prefix}.#{index}-#{total}.chunk"
+        @path = make_path(path_prefix, index, total)
         
         @storage = HDB::new
       end
+      
       
       def write(key, value)
         raise "File is closed!" unless @opened
@@ -118,6 +136,13 @@ module Serials extend self
         @opened = false
         @storage.close
       end
+      
+      private
+      
+      def make_path(path_prefix, index, total)
+        "#{path_prefix}.#{index.to_s.rjust(8, "0")}-#{total.to_s.rjust(8, "0")}.chunk"
+      end
+      
       
     end # Chunk
   end # Database

@@ -47,6 +47,10 @@ describe Serials do
         @sn2.number = "042"
         @sn2.should_not == @sn
       end
+      it "should return false when metadata does not match" do
+        @sn2.metadata = {:a => 1}
+        @sn2.should_not == @sn
+      end
     end
   end
   
