@@ -51,14 +51,25 @@ describe Serials do
   end
   
   describe Database do
+    require 'fileutils'
     before(:each) do
-      @db = Database.new(:chunks => 128)
+      @fpath = File.expand_path(File.dirname(__FILE__) + "/../database")
+      system("rm -f #{@fpath}*")
+      @db = Database.new(:path => @fpath, :chunks => 128)
+      @db.open
       @sn = SerialNumber.new(:company => "Apple", :namespace => "iPod", :number => "001")
+    end
+    after(:each) do
+      @db.close
     end
     it "should write and read serial number" do
       @db.write(@sn)
       sn = @db.find(:company => "Apple", :namespace => "iPod", :number => "001")
       sn.should == @sn
+    end
+    it "should return nil when serial number not found" do
+      sn = @db.find(:company => "Sony", :namespace => "iZod", :number => "002")
+      sn.should be_nil
     end
   end
   
