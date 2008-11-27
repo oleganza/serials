@@ -59,7 +59,7 @@ describe Serials do
     before(:each) do
       @fpath = File.expand_path(File.dirname(__FILE__) + "/../database")
       system("rm -f #{@fpath}*")
-      @db = Database.new(:path => @fpath, :chunks => 128)
+      @db = Database.new(:path => @fpath, :chunks => 10)
       @db.open
       @sn = SerialNumber.new(:company => "Apple", :namespace => "iPod", :number => "001")
     end
